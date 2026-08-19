@@ -36,7 +36,7 @@ router.get("/dashboard", authenticateToken, requireStaff, async (req, res) => {
     const messagesCount = await query(`
       SELECT 
         COUNT(*) as total,
-        COUNT(CASE WHEN status = 'new' THEN 1 END) as unread
+        COUNT(CASE WHEN status = 'unread' THEN 1 END) as unread
       FROM contact_messages
     `);
 
@@ -53,13 +53,13 @@ router.get("/dashboard", authenticateToken, requireStaff, async (req, res) => {
     // Gallery stats
     const galleryStats = await query(`
       SELECT COUNT(*) as total_images
-      FROM gallery_images WHERE is_active = true
+      FROM gallery_images
     `);
 
     // Newsletter subscribers
     const subscriberCount = await query(`
       SELECT COUNT(*) as subscribers
-      FROM newsletter_subscribers WHERE is_active = true
+      FROM newsletter_subscribers WHERE status = 'active'
     `);
 
     res.json({
@@ -265,12 +265,12 @@ router.get(
 
     try {
       const countResult = await query(
-        "SELECT COUNT(*) FROM newsletter_subscribers WHERE is_active = true",
+        "SELECT COUNT(*) FROM newsletter_subscribers WHERE status = 'active'",
       );
 
       const result = await query(
         `SELECT * FROM newsletter_subscribers 
-       WHERE is_active = true 
+       WHERE status = 'active' 
        ORDER BY created_at DESC 
        LIMIT $1 OFFSET $2`,
         [parseInt(limit), parseInt(offset)],
@@ -354,5 +354,48 @@ router.get(
     }
   },
 );
+
+// Settings (admin only)
+router.get("/settings", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await query(
+      "SELECT key, value, value_type, description, is_public FROM settings ORDER BY key",
+    );
+    res.json({ settings: result.rows });
+  } catch (error) {
+    console.error("Error fetching settings:", error);
+    res.status(500).json({ error: "Failed to fetch settings" });
+  }
+});
+
+router.put("/settings", authenticateToken, requireAdmin, async (req, res) => {
+  const settings = req.body?.settings;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return res.status(400).json({ error: "settings must be an object" });
+  }
+  try {
+    const clientResult = await query(
+      "SELECT key, value_type FROM settings WHERE key = ANY($1)",
+      [Object.keys(settings)],
+    );
+    const types = new Map(
+      clientResult.rows.map((row) => [row.key, row.value_type]),
+    );
+    for (const [key, value] of Object.entries(settings)) {
+      if (!types.has(key) || typeof value === "object") continue;
+      await query(
+        "UPDATE settings SET value = $1, updated_at = NOW() WHERE key = $2",
+        [String(value), key],
+      );
+    }
+    const result = await query(
+      "SELECT key, value, value_type, description, is_public FROM settings ORDER BY key",
+    );
+    res.json({ settings: result.rows });
+  } catch (error) {
+    console.error("Error updating settings:", error);
+    res.status(500).json({ error: "Failed to update settings" });
+  }
+});
 
 module.exports = router;
