@@ -1,22 +1,21 @@
-const { Resend } = require('resend');
+const { Resend } = require("resend");
 
 // Initialize Resend with API key from environment
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// The verified sender. Until a custom domain is verified in Resend you can use
-// the shared "onboarding@resend.dev" address. Once your domain is verified,
-// set EMAIL_FROM to something like "Team Emmanuel Foundation <no-reply@teamemmanuel.org>".
+// Verified sender on the foundation's Resend domain.
 const EMAIL_FROM =
-  process.env.EMAIL_FROM || 'Team Emmanuel Foundation <onboarding@resend.dev>';
+  process.env.EMAIL_FROM ||
+  "Team Emmanuel Foundation <no-reply@mail.teamemmanuel.com>";
 
 // All contact form notifications land in this inbox.
 const CONTACT_RECIPIENT =
-  process.env.CONTACT_RECIPIENT || 'teamemmanuelfoundation@gmail.com';
+  process.env.CONTACT_RECIPIENT || "teamemmanuelfoundation@gmail.com";
 
 const BRAND = {
-  green: '#1a7a3c',
-  red: '#d62828',
-  dark: '#111111',
+  green: "#1a7a3c",
+  red: "#d62828",
+  dark: "#111111",
 };
 
 function baseLayout(title, bodyHtml) {
@@ -41,22 +40,30 @@ function baseLayout(title, bodyHtml) {
   </div>`;
 }
 
-function escapeHtml(str = '') {
+function escapeHtml(str = "") {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /**
  * Sends a notification to the foundation inbox whenever someone submits the
  * contact form. Reply-To is set to the sender so staff can reply directly.
  */
-async function sendContactNotification({ name, email, phone, subject, message }) {
+async function sendContactNotification({
+  name,
+  email,
+  phone,
+  subject,
+  message,
+}) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[email] RESEND_API_KEY not set - skipping contact notification email');
+    console.warn(
+      "[email] RESEND_API_KEY not set - skipping contact notification email",
+    );
     return { skipped: true };
   }
 
@@ -67,8 +74,8 @@ async function sendContactNotification({ name, email, phone, subject, message })
     <table style="width:100%;border-collapse:collapse;font-size:14px;color:#111827;">
       <tr><td style="padding:6px 0;color:#6b7280;width:120px;">Name</td><td style="padding:6px 0;">${escapeHtml(name)}</td></tr>
       <tr><td style="padding:6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;"><a href="mailto:${escapeHtml(email)}" style="color:${BRAND.green};">${escapeHtml(email)}</a></td></tr>
-      <tr><td style="padding:6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;">${escapeHtml(phone || 'Not provided')}</td></tr>
-      <tr><td style="padding:6px 0;color:#6b7280;">Subject</td><td style="padding:6px 0;">${escapeHtml(subject || 'General Inquiry')}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;">${escapeHtml(phone || "Not provided")}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Subject</td><td style="padding:6px 0;">${escapeHtml(subject || "General Inquiry")}</td></tr>
     </table>
     <div style="margin-top:20px;padding:16px;background:#f9fafb;border-left:4px solid ${BRAND.green};border-radius:6px;">
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(message)}</p>
@@ -81,8 +88,8 @@ async function sendContactNotification({ name, email, phone, subject, message })
     from: EMAIL_FROM,
     to: CONTACT_RECIPIENT,
     replyTo: email,
-    subject: `New Contact Message: ${subject || 'General Inquiry'}`,
-    html: baseLayout('New Contact Message', body),
+    subject: `New Contact Message: ${subject || "General Inquiry"}`,
+    html: baseLayout("New Contact Message", body),
   });
 }
 
@@ -91,7 +98,7 @@ async function sendContactNotification({ name, email, phone, subject, message })
  */
 async function sendContactReply({ to, name, originalMessage, replyContent }) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[email] RESEND_API_KEY not set - skipping reply email');
+    console.warn("[email] RESEND_API_KEY not set - skipping reply email");
     return { skipped: true };
   }
 
@@ -113,8 +120,8 @@ async function sendContactReply({ to, name, originalMessage, replyContent }) {
     from: EMAIL_FROM,
     to,
     replyTo: CONTACT_RECIPIENT,
-    subject: 'Re: Your message to Team Emmanuel Foundation',
-    html: baseLayout('A reply from Team Emmanuel Foundation', body),
+    subject: "Re: Your message to Team Emmanuel Foundation",
+    html: baseLayout("A reply from Team Emmanuel Foundation", body),
   });
 }
 
